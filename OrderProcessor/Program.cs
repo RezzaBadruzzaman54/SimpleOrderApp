@@ -1,5 +1,7 @@
 ﻿using Confluent.Kafka;
 using Microsoft.Extensions.Configuration;
+using Newtonsoft.Json;
+using OrderProcessor;
 using SimpleOrderDomain.Models;
 
 Console.WriteLine("OrderProcesorApp");
@@ -10,8 +12,8 @@ IConfiguration configuration = new ConfigurationBuilder()
 
 var config = new ConsumerConfig
 {
-    //BootstrapServers = "localhost:9092",
-    BootstrapServers = configuration.GetSection("KafkaSettings").GetSection("Server").Value,
+    BootstrapServers = "localhost:9092",
+    //BootstrapServers = configuration.GetSection("KafkaSettings").GetSection("Server").Value,
     GroupId = "tester",
     AutoOffsetReset = AutoOffsetReset.Earliest
 };
@@ -34,17 +36,22 @@ using (var consumer = new ConsumerBuilder<string, string>(config).Build())
         {
             var cr = consumer.Consume(cts.Token); // blocking
             Console.WriteLine($"Consumed record with key: {cr.Message.Key} and value: {cr.Message.Value}");
-
+           OrderDataKafka orderDataKafka = JsonConvert.DeserializeObject<OrderDataKafka>(cr.Message.Value);
             // EF
             using (var context = new SimpleOrderAppContext())
             {
-                Order order = new Order();
-                order.Code = cr.Message.Key;
-                //order.UserId = Convert.ToInt32(cr.Message.Value);
-                order.ProductId = Convert.ToInt32(cr.Message.Value);
-                order.Quantity = Convert.ToInt32(cr.Message.Value);
+                var user = context.Users.Where(o => o.UserName == orderDataKafka.UserName).SingleOrDefault();
+                //List<Order> orders = new ();
+                //foreach(var order in orderDataKafka)
+                //{
+                    Order currOrder = new();
+                    currOrder.Code = orderDataKafka.Code;
+                    currOrder.UserId = user.Id;
+                    currOrder.ProductId = orderDataKafka.ProductId;
+                    currOrder.Quantity = orderDataKafka.Quantity;
+                //}
 
-                context.Orders.Add(order);
+                context.Orders.Add(currOrder);
                 context.SaveChanges();
             }
         }

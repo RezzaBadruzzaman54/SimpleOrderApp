@@ -10,15 +10,25 @@ namespace OrderService.GraphQL
     {
         [Authorize]
         public async Task<OrderOutput> SubmitOrderAsync(
-           OrderInput input,
+          OrderInput input,
+           ClaimsPrincipal claimsPrincipal,
            [Service] IOptions<KafkaSettings> settings)
         {
+            var userName = claimsPrincipal.Identity.Name;
+
+                OrderDataKafka order = new();
+                order.Code = input.Code;
+                order.ProductId = input.ProductId;
+                order.UserName = userName;
+                order.Quantity = input.Quantity;
+
             var dts = DateTime.Now.ToString();
             var key = "order-" + dts;
-            var val = JsonConvert.SerializeObject(input);
+
+            var val = JsonConvert.SerializeObject(order);
 
             var result = await KafkaHelper.SendMessage(settings.Value, "simpleorderapp", key, val);
-
+            Console.WriteLine(val);
             OrderOutput resp = new OrderOutput
             {
                 TransactionDate = dts,
