@@ -9,11 +9,11 @@ Console.WriteLine("OrderProcesorApp");
 IConfiguration configuration = new ConfigurationBuilder()
       .AddJsonFile("appsettings.json", true, true)
       .Build();
-
+//Console.WriteLine($"b {configuration.GetConnectionString("MyDatabase")}");
 var config = new ConsumerConfig
 {
-    BootstrapServers = "localhost:9092",
-    //BootstrapServers = configuration.GetSection("KafkaSettings").GetSection("Server").Value,
+    //BootstrapServers = "localhost:9092",
+    BootstrapServers = configuration.GetSection("KafkaSettings").GetSection("Server").Value,
     GroupId = "tester",
     AutoOffsetReset = AutoOffsetReset.Earliest
 };
